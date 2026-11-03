@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="file:///android_asset/app.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #eee; padding: 10px 10px 70px 10px; margin: 0; }
+        .container { max-width: 450px; margin: 0 auto; }
+        
+        /* Views visibility switching */
+        .view-section { display: none; }
+        .view-active { display: block; }
+        
+        /* Post Styling */
+        .post { background: #fff; padding: 12px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .post-time { font-size: 11px; color: #888; margin-bottom: 6px; }
+        .media-container { width: 100%; margin: 8px 0; background: #000; border-radius: 6px; overflow: hidden; display: flex; justify-content: center; }
+        video { width: 100%; max-height: 300px; display: block; object-fit: contain; }
+        img { width: 100%; max-height: 250px; object-fit: cover; display: block; }
+        .post-stats { font-size: 12px; color: #666; margin: 6px 0; font-weight: bold; }
+        
+        /* Profile Section Layout */
+        .profile-card { background: #fff; border-radius: 8px; padding: 20px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .profile-avatar { width: 100px; height: 100px; border-radius: 50%; background: #ccc; margin: 0 auto 15px auto; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 32px; color: white; font-weight: bold; border: 3px solid #1877f2; object-fit: cover; cursor: pointer; }
+        .profile-name { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
+        .profile-bio { font-size: 14px; color: #555; margin-bottom: 15px; line-height: 1.4; }
+        
+        /* Buttons and Inputs */
+        button { padding: 6px 12px; margin-right: 5px; cursor: pointer; border: 1px solid #ddd; background: #fafafa; border-radius: 4px; font-weight: bold; }
+        .btn-post { width: 100%; padding: 12px; margin-bottom: 15px; background: #1877f2; color: #fff; border: none; border-radius: 6px; font-size: 14px; }
+        
+        /* Bottom Tab Navigation Bar */
+        .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 55px; background: #fff; border-top: 1px solid #ddd; display: flex; justify-content: space-around; align-items: center; z-index: 1000; }
+        .nav-tab { background: none; border: none; padding: 5px; font-size: 13px; color: #666; font-weight: bold; width: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
+        .nav-tab-active { color: #1877f2; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <!-- 1. FEED VIEW VIEWPORT -->
+        <div id="feedView" class="view-section view-active">
+            <h3>📱 Local MediaFeed</h3>
+            <button class="btn-post" onclick="pickLocalMedia('post')">➕ Upload Image or Video</button>
+            <div id="feed"></div>
+        </div>
+
+        <!-- 2. PROFILE VIEW VIEWPORT -->
+        <div id="profileView" class="view-section">
+            <h3>👤 Your Profile</h3>
+            <div class="profile-card">
+                <!-- Clickable Avatar to change profile photo -->
+                <img id="userAvatarImg" class="profile-avatar" src="" style="display:none;" onclick="pickLocalMedia('avatar')">
+                <div id="userAvatarPlaceholder" class="profile-avatar" onclick="pickLocalMedia('avatar')">U</div>
+                
+                <div class="profile-name" id="profileNameDisplay">Local User</div>
+                <div class="profile-bio" id="profileBioDisplay">Testing layout variations natively inside DroidScript. Tap details below to edit!</div>
+                
+                <button onclick="editProfileDetails()">✏️ Edit Info</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Persistent Bottom Tab Navigation Bar -->
+    <div class="nav-bar">
+        <button class="nav-tab nav-tab-active" id="tabFeed" onclick="switchTab('feed')">🏠 Feed</button>
+        <button class="nav-tab" id="tabProfile" onclick="switchTab('profile')">👤 Profile</button>
+    </div>
+
+    <script>
+        let count = 0;
+        let activeTarget = 'post'; // tracks whether a selected file is a post or a profile picture
+        
+        // Profile Data Storage Cache
+        let userProfile = {
+            name: "Local User",
+            avatarUrl: ""
+        };
+
+        // Navigation Controller Logic
+        function switchTab(targetTab) {
+            document.getElementById('feedView').classList.remove('view-active');
+            document.getElementById('profileView').classList.remove('view-active');
+            document.getElementById('tabFeed').classList.remove('nav-tab-active');
+            document.getElementById('tabProfile').classList.remove('nav-tab-active');
+
+            if(targetTab === 'feed') {
+                document.getElementById('feedView').classList.add('view-active');
+                document.getElementById('tabFeed').classList.add('nav-tab-active');
+            } else if (targetTab === 'profile') {
+                document.getElementById('profileView').classList.add('view-active');
+                document.getElementById('tabProfile').classList.add('nav-tab-active');
+            }
+        }
+
+        // Inline configuration logic to rewrite profile card text content
+        function editProfileDetails() {
+            let newName = prompt("Change profile name:", userProfile.name);
+            if(newName && newName.trim() !== "") {
+                userProfile.name = newName;
+                document.getElementById('profileNameDisplay').innerText = newName;
+                
+                // Dynamically update the default placeholder text string icon initials if no asset is loaded
+                if(!userProfile.avatarUrl) {
+                    document.getElementById('userAvatarPlaceholder').innerText = newName.charAt(0).toUpperCase();
+                }
+            }
+            
+            let newBio = prompt("Update your bio description:");
+            if(newBio && newBio.trim() !== "") {
+                document.getElementById('profileBioDisplay').innerText = newBio;
+            }
+        }
+
+        // Standardized File Router Engine
+        function onFileChosen(filePath) {
+            if (!filePath) return;
+
+            if (activeTarget === 'avatar') {
+                // Set the picked file path as your avatar background source layout
+                userProfile.avatarUrl = filePath;
+                let imgEl = document.getElementById('userAvatarImg');
+                let placeholderEl = document.getElementById('userAvatarPlaceholder');
+                
+                imgEl.src = filePath;
+                imgEl.style.display = 'block';
+                placeholderEl.style.display = 'none';
+                
+                if (typeof app !== 'undefined' && app.ShowPopup) app.ShowPopup("Profile picture updated!");
+            } 
+            else if (activeTarget === 'post') {
+                let textContent = prompt("Add a caption for this media:");
+                let isVideo = filePath.toLowerCase().match(/\.(mp4|3gp|webm|ogg|mov)$/) || filePath.includes("video");
+                let type = isVideo ? "video" : "image";
+
+                insertPost(userProfile.name, textContent || "Shared media", type, filePath);
+            }
+        }
+
+        function pickLocalMedia(targetType) {
+            activeTarget = targetType;
+            if (typeof app !== 'undefined' && app.ChooseFile) {
+                // If modifying profile layout icon avatar, restrict file picker context exclusively to images
+                let mimeFilter = (targetType === 'avatar') ? "image/*" : "image/*,video/*";
+                app.ChooseFile("Select Asset", mimeFilter, onFileChosen);
+            } else {
+                // Browser Mock Environment Simulation Fallback
+                onFileChosen("https://picsum.photos");
+            }
+        }
+
+        function insertPost(username, text, mediaType, mediaUrl) {
+            count++;
+            let id = 'p' + count;
+            let time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            let card = document.createElement('div');
+            card.className = 'post';
+            
+            let mediaHtml = '';
+            if (mediaType === 'video') {
+                mediaHtml = `<div class="media-container"><video src="${mediaUrl}" controls loop></video></div>`;
+            } else if (mediaType === 'image') {
+                mediaHtml = `<div class="media-container"><img src="${mediaUrl}"></div>`;
+            }
+
+            card.innerHTML = `
+                <div class="post-time">🕒 ${time}</div>
+                <div><b>${username}</b>: ${text}</div>
+                ${mediaHtml}
+                <div class="post-stats">❤️ <span id="likes-${id}">0</span> likes</div>
+                <button onclick="document.getElementById('likes-${id}').innerText++">👍 Like</button>
+            `;
+            
+            document.getElementById('feed').prepend(card);
+        }
+    </script>
+</body>
+</html>
